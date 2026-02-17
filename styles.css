@@ -306,3 +306,28 @@ header p {
 .material-icon:active {
     cursor: grabbing;
 }
+.course-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.drag-handle {
+    margin-right: auto;  /* pushes the rest to the right */
+}
+
+.delete-course {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    margin-left: auto;   /* aligns to the right */
+}
+
+.delete-course:hover {
+    opacity: 1;
+    color: #dc2626;      /* red on hover */
+}

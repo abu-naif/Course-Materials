@@ -147,18 +147,19 @@ function getIconForType(type) {
 }
 
 function createCourseCard(course, courseIndex) {
-    const card = document.createElement('div');
+     const card = document.createElement('div');
     card.className = 'course-card';
     card.setAttribute('data-course-code', course.code);
     card.setAttribute('data-course-id', course.id); // store Firestore doc ID
 
-    // Header with drag handle
+    // Header with drag handle, course code, name, and delete button
     const header = document.createElement('div');
     header.className = 'course-header';
     header.innerHTML = `
         <span class="drag-handle" title="Drag to reorder course">⋮⋮</span>
         <div class="course-code">${course.code}</div>
         <div class="course-name">${course.name}</div>
+        <button class="delete-course" title="Delete course" data-course-id="${course.id}">🗑️</button>
     `;
     card.appendChild(header);
 
@@ -235,6 +236,26 @@ function createCourseCard(course, courseIndex) {
 
     return card;
 }
+
+// Delete course
+document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('delete-course')) {
+        const courseId = e.target.getAttribute('data-course-id');
+        if (!courseId) return;
+
+        if (confirm('Are you sure you want to delete this entire course?')) {
+            try {
+                await db.collection('courses').doc(courseId).delete();
+                console.log('Course deleted');
+                // Reload courses from Firestore
+                await loadCoursesFromFirestore();
+            } catch (error) {
+                console.error('Error deleting course:', error);
+                alert('Failed to delete course. Check console.');
+            }
+        }
+    }
+});
 
 // Show add material form
 function showAddMaterialForm(card, courseId) {
