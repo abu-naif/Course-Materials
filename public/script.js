@@ -1,22 +1,23 @@
-// -------------------- Firebase Configuration --------------------
-// Replace this object with your own from Firebase console
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase config – make sure it matches YOUR actual config
 const firebaseConfig = {
-  apiKey: "AIzaSyD4Y2LnZ2rZX885CDDYrdnScREXHNhE30U",
-  authDomain: "course-hub-6623d.firebaseapp.com",
-  projectId: "course-hub-6623d",
-  storageBucket: "course-hub-6623d.firebasestorage.app",
-  messagingSenderId: "284574527241",
-  appId: "1:284574527241:web:457968486b7f3d5e92add8",
-  measurementId: "G-ZM3C6E8G6B"
+    apiKey: "AIzaSyD4Y2LnZ2rZX885CDDYrdnScREXHNhE30U",
+    authDomain: "course-hub-6623d.firebaseapp.com",
+    projectId: "course-hub-6623d",
+    storageBucket: "course-hub-6623d.firebasestorage.app",
+    messagingSenderId: "284574527241",
+    appId: "1:284574527241:web:457968486b7f3d5e92add8",
+    measurementId: "G-ZM3C6E8G6B"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 // -------------------- Global Variables --------------------
 let courses = [];
+let currentUser = null;
+
+// Default courses – will be used when a new user signs up
 const DEFAULT_COURSES = [
   {
     code: "MAT120",
@@ -56,53 +57,160 @@ const DEFAULT_COURSES = [
   }
 ];
 
-// -------------------- Load from Firestore on page load --------------------
-async function loadCoursesFromFirestore() {
-    try {
-        const snapshot = await db.collection('courses').get();
-        if (snapshot.empty) {
-            // No data yet – upload default courses
-            console.log("No courses found, uploading defaults...");
-            await uploadDefaultCourses();
-            // Then load again
-            const newSnapshot = await db.collection('courses').get();
-            courses = newSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } else {
-            courses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
+// -------------------- Auth State Observer --------------------
+auth.onAuthStateChanged(async (user) => {
+    currentUser = user;
+    const signInForm = document.getElementById('sign-in-form');
+    const userInfo = document.getElementById('user-info');
+    const userEmail = document.getElementById('user-email');
+
+    if (user) {
+        // User is signed in
+        signInForm.style.display = 'none';
+        userInfo.style.display = 'flex';
+        userEmail.textContent = user.email;
+        await loadCoursesFromFirestore();
+    } else {
+        // User is signed out
+        signInForm.style.display = 'block';
+        userInfo.style.display = 'none';
+        courses = [];
         renderCourses();
-        initDragAndDrop();
+        // Optionally disable add course button
+        document.getElementById('addCourseBtn').disabled = true;
+    }
+});
+
+// -------------------- Sign Up --------------------
+document.getElementById('signup-btn').addEventListener('click', async () => {
+    const email = document.getElementById('signin-email').value.trim();
+    const password = document.getElementById('signin-password').value.trim();
+    if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+    }
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        console.log('User signed up:', user.email);
+
+        // Upload default courses
+        await uploadDefaultCoursesForUser(user.uid);
+
+        // Create a metadata document to mark this user as initialized
+        await db.collection('userMetadata').doc(user.uid).set({
+            initialized: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error('Sign up error:', error);
+        alert(error.message);
+    }
+});
+
+// -------------------- Sign In --------------------
+document.getElementById('signin-btn').addEventListener('click', async () => {
+    const email = document.getElementById('signin-email').value.trim();
+    const password = document.getElementById('signin-password').value.trim();
+    if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+    }
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+        console.error('Sign in error:', error);
+        alert(error.message);
+    }
+});
+
+// -------------------- Sign Out --------------------
+document.getElementById('sign-out-btn').addEventListener('click', async () => {
+    try {
+        await auth.signOut();
+    } catch (error) {
+        console.error('Sign out error:', error);
+    }
+});
+
+// -------------------- Load Courses for Current User --------------------
+async function loadCoursesFromFirestore() {
+    if (!currentUser) return;
+    const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
+    const metadataRef = db.collection('userMetadata').doc(currentUser.uid);
+    
+    try {
+        // Get both courses and metadata in parallel
+        const [snapshot, metadataSnap] = await Promise.all([
+            userCoursesRef.get(),
+            metadataRef.get()
+        ]);
+
+        if (snapshot.empty) {
+            // No courses found
+            if (metadataSnap.exists) {
+                // User exists but has no courses (they deleted them all)
+                courses = [];
+                renderCourses();
+                initDragAndDrop();
+                document.getElementById('addCourseBtn').disabled = false;
+            } else {
+                // New user – upload default courses
+                console.log("New user, uploading defaults...");
+                await uploadDefaultCoursesForUser(currentUser.uid);
+                // Also create metadata
+                await metadataRef.set({
+                    initialized: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Reload after upload
+                const newSnapshot = await userCoursesRef.get();
+                courses = newSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderCourses();
+                initDragAndDrop();
+                document.getElementById('addCourseBtn').disabled = false;
+            }
+        } else {
+            // User has courses – load them
+            courses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderCourses();
+            initDragAndDrop();
+            document.getElementById('addCourseBtn').disabled = false;
+        }
     } catch (error) {
         console.error("Error loading courses:", error);
     }
 }
 
-async function uploadDefaultCourses() {
+// -------------------- Upload Default Courses for a New User --------------------
+async function uploadDefaultCoursesForUser(uid) {
     const batch = db.batch();
     DEFAULT_COURSES.forEach(course => {
-        const docRef = db.collection('courses').doc(); // auto-generated ID
+        const docRef = db.collection('users').doc(uid).collection('courses').doc(); // auto-generated ID
         batch.set(docRef, course);
     });
     await batch.commit();
 }
 
-// -------------------- Save entire courses array to Firestore --------------------
+// -------------------- Save Entire Courses Array to Firestore --------------------
 async function saveCoursesToFirestore() {
+    if (!currentUser) return;
+    const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
     try {
-        // First, delete all existing documents in the 'courses' collection
-        const snapshot = await db.collection('courses').get();
+        // Delete all existing documents
+        const snapshot = await userCoursesRef.get();
         const batch = db.batch();
         snapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
         await batch.commit();
 
-        // Now upload current courses array
+        // Upload current courses
         const newBatch = db.batch();
         courses.forEach(course => {
-            // Remove the 'id' field if present (we don't want to store it)
             const { id, ...courseData } = course;
-            const docRef = db.collection('courses').doc(); // new random ID
+            const docRef = userCoursesRef.doc(); // new random ID
             newBatch.set(docRef, courseData);
         });
         await newBatch.commit();
@@ -112,7 +220,7 @@ async function saveCoursesToFirestore() {
     }
 }
 
-// -------------------- Render & Helper Functions (mostly unchanged) --------------------
+// -------------------- Render & Helper Functions --------------------
 function renderCourses() {
     const container = document.getElementById('courseContainer');
     container.innerHTML = '';
@@ -147,7 +255,7 @@ function getIconForType(type) {
 }
 
 function createCourseCard(course, courseIndex) {
-     const card = document.createElement('div');
+    const card = document.createElement('div');
     card.className = 'course-card';
     card.setAttribute('data-course-code', course.code);
     card.setAttribute('data-course-id', course.id); // store Firestore doc ID
@@ -200,16 +308,13 @@ function createCourseCard(course, courseIndex) {
         list.setAttribute('data-type', type);
 
         items.forEach(item => {
-            // For delete, we need a unique identifier – use combination of properties
-            // Since we don't have IDs, we'll use the index in the materials array (careful after reorder)
-            // We'll rely on the fact that after any change we re-render, so indices are fresh
             const materialIndex = course.materials.findIndex(
                 m => m.type === item.type && m.title === item.title && m.url === item.url
             );
 
             const li = document.createElement('li');
             li.className = `material-item ${item.type}`;
-            li.setAttribute('data-material-index', materialIndex); // store for delete
+            li.setAttribute('data-material-index', materialIndex);
 
             const icon = getIconForType(item.type);
 
@@ -236,26 +341,6 @@ function createCourseCard(course, courseIndex) {
 
     return card;
 }
-
-// Delete course
-document.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('delete-course')) {
-        const courseId = e.target.getAttribute('data-course-id');
-        if (!courseId) return;
-
-        if (confirm('Are you sure you want to delete this entire course?')) {
-            try {
-                await db.collection('courses').doc(courseId).delete();
-                console.log('Course deleted');
-                // Reload courses from Firestore
-                await loadCoursesFromFirestore();
-            } catch (error) {
-                console.error('Error deleting course:', error);
-                alert('Failed to delete course. Check console.');
-            }
-        }
-    }
-});
 
 // Show add material form
 function showAddMaterialForm(card, courseId) {
@@ -303,11 +388,8 @@ function showAddMaterialForm(card, courseId) {
 
         courses[courseIndex].materials.push({ type, title, url });
 
-        // Save to Firestore
         await saveCoursesToFirestore();
-
-        // Re-render
-        await loadCoursesFromFirestore(); // reload to get updated data
+        await loadCoursesFromFirestore(); // reload to update UI
     });
 
     document.getElementById('cancel-material').addEventListener('click', () => {
@@ -317,6 +399,10 @@ function showAddMaterialForm(card, courseId) {
 
 // Add new course
 document.getElementById('addCourseBtn').addEventListener('click', async () => {
+    if (!currentUser) {
+        alert('Please sign in first.');
+        return;
+    }
     const code = prompt('Enter course code (e.g. MAT130):');
     if (!code) return;
     const name = prompt('Enter course name (e.g. Linear Algebra):');
@@ -328,15 +414,16 @@ document.getElementById('addCourseBtn').addEventListener('click', async () => {
         materials: []
     };
 
-    // Add to Firestore directly
-    await db.collection('courses').add(newCourse);
-    // Reload from Firestore
-    await loadCoursesFromFirestore();
+    // Add to Firestore directly under the user's collection
+    const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
+    await userCoursesRef.add(newCourse);
+    await loadCoursesFromFirestore(); // reload
 });
 
 // Delete material
 document.addEventListener('click', async (e) => {
     if (e.target.classList.contains('delete-material')) {
+        if (!currentUser) return;
         const courseId = e.target.getAttribute('data-course-id');
         const materialIndex = e.target.getAttribute('data-material-index');
 
@@ -345,14 +432,30 @@ document.addEventListener('click', async (e) => {
         const courseIndex = courses.findIndex(c => c.id === courseId);
         if (courseIndex === -1) return;
 
-        // Remove the material
         courses[courseIndex].materials.splice(materialIndex, 1);
-
-        // Save to Firestore
         await saveCoursesToFirestore();
-
-        // Reload from Firestore
         await loadCoursesFromFirestore();
+    }
+});
+
+// Delete course
+document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('delete-course')) {
+        if (!currentUser) return;
+        const courseId = e.target.getAttribute('data-course-id');
+        if (!courseId) return;
+
+        if (confirm('Are you sure you want to delete this entire course?')) {
+            try {
+                const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
+                await userCoursesRef.doc(courseId).delete();
+                console.log('Course deleted');
+                await loadCoursesFromFirestore();
+            } catch (error) {
+                console.error('Error deleting course:', error);
+                alert('Failed to delete course. Check console.');
+            }
+        }
     }
 });
 
@@ -377,7 +480,6 @@ function initDragAndDrop() {
             if (newOrder.length === courses.length) {
                 courses = newOrder;
                 await saveCoursesToFirestore();
-                // No need to reload – we just saved the new order.
             }
         }
     });
@@ -395,7 +497,6 @@ function initMaterialSortable(card, courseIndex) {
             handle: '.material-icon',
             ghostClass: 'material-ghost',
             onEnd: async function() {
-                // Rebuild materials for this course based on DOM order
                 const newMaterials = [];
                 const listsInOrder = card.querySelectorAll('.material-list');
                 listsInOrder.forEach(l => {
@@ -410,15 +511,11 @@ function initMaterialSortable(card, courseIndex) {
                 });
                 courses[courseIndex].materials = newMaterials;
                 await saveCoursesToFirestore();
-                // Reload from Firestore to keep everything consistent
                 await loadCoursesFromFirestore();
             }
         });
     });
 }
-
-// Start the app
-loadCoursesFromFirestore();
 
 // Add some style for dragging
 const style = document.createElement('style');

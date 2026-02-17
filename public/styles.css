@@ -94,23 +94,19 @@ header p {
 
 /* Glass‑morphism card */
 .course-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: #7F9C96;  /* Solid color */
     border-radius: 2rem;
     padding: 1.5rem;
-    box-shadow: 0 20px 30px -8px rgba(0, 50, 80, 0.3),
-                inset 0 2px 4px rgba(255, 255, 255, 0.8);
+    box-shadow: 0 20px 30px -8px rgba(0, 50, 80, 0.3);
     transition: all 0.25s ease;
     border: 1px solid rgba(255, 255, 255, 0.6);
-    cursor: default;  /* default cursor, drag handle will change it */
+    cursor: default;
 }
 
 .course-card:hover {
     transform: translateY(-6px) scale(1.01);
-    box-shadow: 0 28px 36px -12px rgba(0, 60, 100, 0.4),
-                inset 0 2px 4px rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 28px 36px -12px rgba(0, 60, 100, 0.4);
+    background: #8FACA6;  /* Slightly lighter shade for hover (optional) */
 }
 
 /* Drag handle – appears in the top‑right corner */
@@ -330,4 +326,45 @@ header p {
 .delete-course:hover {
     opacity: 1;
     color: #dc2626;      /* red on hover */
+}
+#auth-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#sign-in-form input {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 2rem;
+    margin: 0 0.3rem;
+}
+
+.btn-secondary {
+    background: #64748b;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255,255,255,0.4);
+    padding: 0.5rem 1.5rem;
+    border-radius: 2rem;
 }
