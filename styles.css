@@ -1,0 +1,308 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(145deg, #b3e5fc 0%, #81d4fa 100%);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    position: relative;
+}
+
+/* Optional animated floating shapes */
+body::before {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    top: -50px;
+    right: -50px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    bottom: -100px;
+    left: -100px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+    position: relative;
+    z-index: 1;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    color: #0a2a44;
+    letter-spacing: -0.5px;
+    text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
+}
+
+header p {
+    color: #1e3c5c;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: #0a2a44;
+    color: white;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    box-shadow: 0 8px 16px -4px rgba(10, 42, 68, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:hover {
+    background: #1e3c5c;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px -6px rgba(10, 42, 68, 0.4);
+}
+
+.course-grid {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* Glass‑morphism card */
+.course-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    box-shadow: 0 20px 30px -8px rgba(0, 50, 80, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.8);
+    transition: all 0.25s ease;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    cursor: default;  /* default cursor, drag handle will change it */
+}
+
+.course-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 28px 36px -12px rgba(0, 60, 100, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Drag handle – appears in the top‑right corner */
+.drag-handle {
+    float: right;
+    font-size: 1.5rem;
+    cursor: grab;
+    color: #2c3e50;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    user-select: none;
+    margin-left: 0.5rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.course-card:hover .drag-handle {
+    opacity: 1;
+}
+
+.course-header {
+    margin-bottom: 1.2rem;
+    border-bottom: 2px solid rgba(10, 42, 68, 0.2);
+    padding-bottom: 0.8rem;
+    overflow: hidden; /* contains the float */
+}
+
+.course-code {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #0a2a44;
+    line-height: 1.2;
+    display: inline-block;
+}
+
+.course-name {
+    font-size: 1rem;
+    color: #1e3c5c;
+    margin-top: 0.2rem;
+    font-weight: 400;
+}
+
+.material-category {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0a2a44;
+    margin: 1rem 0 0.5rem 0;
+    padding-bottom: 0.2rem;
+    border-bottom: 1px dashed rgba(10, 42, 68, 0.3);
+}
+
+.material-section:first-child .material-category {
+    margin-top: 0;
+}
+
+.material-list {
+    list-style: none;
+}
+
+.material-item {
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.8rem;
+    background: rgba(240, 248, 255, 0.6);
+    backdrop-filter: blur(4px);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: background 0.2s, transform 0.1s;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.material-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: scale(1.01);
+}
+
+.material-icon {
+    font-size: 1.3rem;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.material-link {
+    text-decoration: none;
+    color: #0a2a44;
+    font-weight: 500;
+    word-break: break-word;
+    flex: 1;
+}
+
+.material-link:hover {
+    color: #1e6f9f;
+    text-decoration: underline;
+}
+
+.delete-material {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    padding: 0 0.2rem;
+}
+
+.delete-material:hover {
+    opacity: 1;
+}
+
+.btn-add-material {
+    background: rgba(10, 42, 68, 0.8);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.95rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    margin-top: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-add-material:hover {
+    background: #0a2a44;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -4px rgba(0, 30, 50, 0.4);
+}
+
+.add-material-form {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.add-material-form input,
+.add-material-form select {
+    padding: 0.6rem;
+    border: 1px solid rgba(10, 42, 68, 0.2);
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.add-material-form button {
+    background: #0a2a44;
+    color: white;
+    border: none;
+    padding: 0.6rem;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.add-material-form button:hover {
+    background: #1e3c5c;
+}
+
+/* Material type left border colors */
+.material-item.book { border-left: 4px solid #8b5cf6; }
+.material-item.pdf { border-left: 4px solid #ef4444; }
+.material-item.link { border-left: 4px solid #10b981; }
+.material-item.note { border-left: 4px solid #f59e0b; }
+.material-item.audio { border-left: 4px solid #ec4899; }
+.material-item.recording { border-left: 4px solid #3b82f6; }
+
+@media (max-width: 640px) {
+    header h1 { font-size: 2rem; }
+    .course-grid { grid-template-columns: 1fr; }
+}
+.material-icon {
+    cursor: grab;
+}
+.material-icon:active {
+    cursor: grabbing;
+}
+.material-icon {
+    cursor: grab;
+}
+.material-icon:active {
+    cursor: grabbing;
+}
