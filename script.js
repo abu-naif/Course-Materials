@@ -1,3 +1,13 @@
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD4Y2LnZ2rZX885CDDYrdnScREXHNhE30U",
+  authDomain: "course-hub-6623d.firebaseapp.com",
+  projectId: "course-hub-6623d",
+  storageBucket: "course-hub-6623d.firebasestorage.app",
+  messagingSenderId: "284574527241",
+  appId: "1:284574527241:web:457968486b7f3d5e92add8",
+  measurementId: "G-ZM3C6E8G6B"
+};
 // Default data (your four courses) – used only the very first time
 const DEFAULT_COURSES = [
   {
