@@ -6,40 +6,38 @@
     <title>Course Materials Hub</title>
     <!-- SortableJS for drag & drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <!-- CSS with version cache‑buster -->
+    <link rel="stylesheet" href="styles.css?v=20250218">
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>   <!-- NEW -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-<link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
     <header>
-    <h1>📚 My Semester Courses</h1>
-    <p>Drag cards to rearrange • Sky‑blue edition</p>
-    
-    <!-- Authentication area -->
-    <div id="auth-section">
-        <div id="user-info" style="display: none;">
-            <span id="user-email"></span>
-            <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
+        <h1>📚 My Semester Courses</h1>
+        <p>Drag cards to rearrange • Sky‑blue edition</p>
+        
+        <!-- Authentication area -->
+        <div id="auth-section">
+            <div id="user-info" style="display: none;">
+                <span id="user-email"></span>
+                <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
+            </div>
+            <div id="sign-in-form">
+                <input type="email" id="signin-email" placeholder="Email" />
+                <input type="password" id="signin-password" placeholder="Password" />
+                <button id="signin-btn" class="btn-primary">Sign In</button>
+                <button id="signup-btn" class="btn-secondary">Sign Up</button>
+            </div>
         </div>
-        <div id="sign-in-form">
-            <input type="email" id="signin-email" placeholder="Email" />
-            <input type="password" id="signin-password" placeholder="Password" />
-            <button id="signin-btn" class="btn-primary">Sign In</button>
-            <button id="signup-btn" class="btn-secondary">Sign Up</button>
-        </div>
-    </div>
 
-    <button id="addCourseBtn" class="btn-primary">➕ New Course</button>
-</header>
+        <button id="addCourseBtn" class="btn-primary">➕ New Course</button>
+    </header>
     <main id="courseContainer" class="course-grid">
         <!-- Cards will be generated here -->
     </main>
-    <script src="script.js"></script>
+    <!-- Main script with version cache‑buster -->
+    <script src="script.js?v=20250218"></script>
 </body>
 </html>

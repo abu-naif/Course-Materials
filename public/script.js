@@ -354,7 +354,7 @@ function showAddMaterialForm(card, courseId) {
         { value: 'book', label: '📘 Book' },
         { value: 'pdf', label: '📕 PDF' },
         { value: 'link', label: '🔗 Link' },
-        { value: 'note', label: '📓 Note' },
+        { value: 'note', label: '📓 Notes' },
         { value: 'audio', label: '🎤 Audio' },
         { value: 'recording', label: '📹 Class Recording' }
     ];
