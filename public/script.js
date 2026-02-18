@@ -62,47 +62,83 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     const signInForm = document.getElementById('sign-in-form');
     const userInfo = document.getElementById('user-info');
-    const userEmail = document.getElementById('user-email');
+    const userDisplay = document.getElementById('user-display'); // changed from user-email
 
     if (user) {
-        // User is signed in
         signInForm.style.display = 'none';
         userInfo.style.display = 'flex';
-        userEmail.textContent = user.email;
+        userDisplay.textContent = user.displayName || user.email;
         await loadCoursesFromFirestore();
     } else {
-        // User is signed out
         signInForm.style.display = 'block';
         userInfo.style.display = 'none';
         courses = [];
         renderCourses();
-        // Optionally disable add course button
         document.getElementById('addCourseBtn').disabled = true;
     }
 });
 
 // -------------------- Sign Up --------------------
-document.getElementById('signup-btn').addEventListener('click', async () => {
-    const email = document.getElementById('signin-email').value.trim();
-    const password = document.getElementById('signin-password').value.trim();
-    if (!email || !password) {
-        alert('Please enter email and password.');
+// -------------------- Show Sign Up Modal --------------------
+document.getElementById('signup-btn').addEventListener('click', () => {
+    document.getElementById('signup-modal').style.display = 'flex';
+});
+
+// -------------------- Cancel Sign Up Modal --------------------
+document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+    document.getElementById('signup-modal').style.display = 'none';
+    // Clear fields
+    document.getElementById('signup-name').value = '';
+    document.getElementById('signup-email').value = '';
+    document.getElementById('signup-password').value = '';
+    document.getElementById('signup-confirm').value = '';
+});
+
+// -------------------- Modal Sign Up --------------------
+document.getElementById('modal-signup-btn').addEventListener('click', async () => {
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value.trim();
+    const confirm = document.getElementById('signup-confirm').value.trim();
+
+    if (!name || !email || !password || !confirm) {
+        alert('Please fill in all fields.');
         return;
     }
+    if (password !== confirm) {
+        alert('Passwords do not match.');
+        return;
+    }
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+    }
+
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
-        console.log('User signed up:', user.email);
+
+        // Set display name
+        await user.updateProfile({ displayName: name });
 
         // Upload default courses
         await uploadDefaultCoursesForUser(user.uid);
 
-        // Create a metadata document to mark this user as initialized
+        // Create metadata document
         await db.collection('userMetadata').doc(user.uid).set({
+            displayName: name,
             initialized: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // Close modal and clear fields
+        document.getElementById('signup-modal').style.display = 'none';
+        document.getElementById('signup-name').value = '';
+        document.getElementById('signup-email').value = '';
+        document.getElementById('signup-password').value = '';
+        document.getElementById('signup-confirm').value = '';
+
+        // User is automatically signed in; auth observer will update UI.
     } catch (error) {
         console.error('Sign up error:', error);
         alert(error.message);
@@ -124,6 +160,129 @@ document.getElementById('signin-btn').addEventListener('click', async () => {
         alert(error.message);
     }
 });
+// -------------------- Forgot Password --------------------
+document.getElementById('forgot-password-link').addEventListener('click', (e) => {
+    e.preventDefault(); // prevent page jump
+
+    const email = document.getElementById('signin-email').value.trim();
+    if (!email) {
+        alert('Please enter your email address first.');
+        return;
+    }
+
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            alert(`Password reset email sent to ${email}. Check your inbox.`);
+        })
+        .catch((error) => {
+            console.error('Password reset error:', error);
+            let message = 'Error sending reset email. ';
+            if (error.code === 'auth/user-not-found') {
+                message = 'No account found with this email address.';
+            } else if (error.code === 'auth/invalid-email') {
+                message = 'Please enter a valid email address.';
+            } else if (error.code === 'auth/too-many-requests') {
+                message = 'Too many requests. Please try again later.';
+            }
+            alert(message);
+        });
+});
+
+// Show change password modal
+document.getElementById('change-password-btn').addEventListener('click', () => {
+    document.getElementById('change-password-modal').style.display = 'flex';
+});
+
+// Cancel button in modal
+document.getElementById('cancel-change-password').addEventListener('click', () => {
+    document.getElementById('change-password-modal').style.display = 'none';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+});
+
+// Save new password
+document.getElementById('save-new-password').addEventListener('click', async () => {
+    const newPass = document.getElementById('new-password').value.trim();
+    const confirmPass = document.getElementById('confirm-password').value.trim();
+
+    if (!newPass || !confirmPass) {
+        alert('Please fill both fields.');
+        return;
+    }
+    if (newPass !== confirmPass) {
+        alert('Passwords do not match.');
+        return;
+    }
+    if (newPass.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+    }
+
+    try {
+        await currentUser.updatePassword(newPass);
+        alert('Password updated successfully!');
+        // Close modal and clear fields
+        document.getElementById('change-password-modal').style.display = 'none';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+    } catch (error) {
+        console.error('Password update error:', error);
+        if (error.code === 'auth/requires-recent-login') {
+            alert('For security, please sign out and sign in again before changing your password.');
+        } else {
+            alert('Error updating password. ' + error.message);
+        }
+    }
+});
+
+// -------------------- Delete Account --------------------
+document.getElementById('delete-account-btn').addEventListener('click', async () => {
+    if (!currentUser) return;
+
+    // Double confirmation
+    const confirm1 = confirm('Are you sure you want to delete your account?');
+    if (!confirm1) return;
+
+    const confirm2 = confirm('⚠️ THIS ACTION IS PERMANENT!\n\nAll your courses and materials will be permanently deleted. There is no undo. Are you absolutely sure?');
+    if (!confirm2) return;
+
+    try {
+        // Delete all user data from Firestore
+        console.log('Deleting user data...');
+
+        // Delete all courses
+        const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
+        const coursesSnapshot = await userCoursesRef.get();
+
+        const batch = db.batch();
+        coursesSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Delete metadata document (if exists)
+        const metadataRef = db.collection('userMetadata').doc(currentUser.uid);
+        const metadataSnap = await metadataRef.get();
+        if (metadataSnap.exists) {
+            batch.delete(metadataRef);
+        }
+
+        await batch.commit();
+        console.log('User data deleted from Firestore');
+
+        // Finally delete the authentication account
+        await currentUser.delete();
+        console.log('User account deleted');
+        // Auth state observer will sign out automatically
+
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        if (error.code === 'auth/requires-recent-login') {
+            alert('For security, please sign out and sign in again before deleting your account.');
+        } else {
+            alert('Error deleting account. Please try again later.');
+        }
+    }
+});
 
 // -------------------- Sign Out --------------------
 document.getElementById('sign-out-btn').addEventListener('click', async () => {
@@ -141,30 +300,24 @@ async function loadCoursesFromFirestore() {
     const metadataRef = db.collection('userMetadata').doc(currentUser.uid);
     
     try {
-        // Get both courses and metadata in parallel
         const [snapshot, metadataSnap] = await Promise.all([
             userCoursesRef.get(),
             metadataRef.get()
         ]);
 
         if (snapshot.empty) {
-            // No courses found
             if (metadataSnap.exists) {
-                // User exists but has no courses (they deleted them all)
                 courses = [];
                 renderCourses();
                 initDragAndDrop();
                 document.getElementById('addCourseBtn').disabled = false;
             } else {
-                // New user – upload default courses
                 console.log("New user, uploading defaults...");
                 await uploadDefaultCoursesForUser(currentUser.uid);
-                // Also create metadata
                 await metadataRef.set({
                     initialized: true,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                // Reload after upload
                 const newSnapshot = await userCoursesRef.get();
                 courses = newSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderCourses();
@@ -172,7 +325,6 @@ async function loadCoursesFromFirestore() {
                 document.getElementById('addCourseBtn').disabled = false;
             }
         } else {
-            // User has courses – load them
             courses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderCourses();
             initDragAndDrop();
@@ -187,7 +339,7 @@ async function loadCoursesFromFirestore() {
 async function uploadDefaultCoursesForUser(uid) {
     const batch = db.batch();
     DEFAULT_COURSES.forEach(course => {
-        const docRef = db.collection('users').doc(uid).collection('courses').doc(); // auto-generated ID
+        const docRef = db.collection('users').doc(uid).collection('courses').doc();
         batch.set(docRef, course);
     });
     await batch.commit();
@@ -198,7 +350,6 @@ async function saveCoursesToFirestore() {
     if (!currentUser) return;
     const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
     try {
-        // Delete all existing documents
         const snapshot = await userCoursesRef.get();
         const batch = db.batch();
         snapshot.docs.forEach(doc => {
@@ -206,11 +357,10 @@ async function saveCoursesToFirestore() {
         });
         await batch.commit();
 
-        // Upload current courses
         const newBatch = db.batch();
         courses.forEach(course => {
             const { id, ...courseData } = course;
-            const docRef = userCoursesRef.doc(); // new random ID
+            const docRef = userCoursesRef.doc();
             newBatch.set(docRef, courseData);
         });
         await newBatch.commit();
@@ -237,6 +387,8 @@ function getTypeDisplayName(type) {
         book: 'Books',
         pdf: 'PDFs',
         link: 'Links',
+        note: 'Notes (URL)',
+        textnote: 'My Notes',
         recording: 'Class Recordings'
     };
     return map[type] || (type.charAt(0).toUpperCase() + type.slice(1) + 's');
@@ -248,6 +400,7 @@ function getIconForType(type) {
         pdf: '📕',
         link: '🔗',
         note: '📓',
+        textnote: '📝',
         audio: '🎤',
         recording: '📹'
     };
@@ -258,9 +411,8 @@ function createCourseCard(course, courseIndex) {
     const card = document.createElement('div');
     card.className = 'course-card';
     card.setAttribute('data-course-code', course.code);
-    card.setAttribute('data-course-id', course.id); // store Firestore doc ID
+    card.setAttribute('data-course-id', course.id);
 
-    // Header with drag handle, course code, name, and delete button
     const header = document.createElement('div');
     header.className = 'course-header';
     header.innerHTML = `
@@ -271,7 +423,6 @@ function createCourseCard(course, courseIndex) {
     `;
     card.appendChild(header);
 
-    // Group materials by type
     const materialsByType = {};
     course.materials.forEach(item => {
         const type = item.type;
@@ -279,7 +430,7 @@ function createCourseCard(course, courseIndex) {
         materialsByType[type].push(item);
     });
 
-    const typeOrder = ['book', 'pdf', 'link', 'recording'];
+    const typeOrder = ['book', 'pdf', 'link', 'recording', 'textnote', 'note'];
     const presentTypes = Object.keys(materialsByType);
     presentTypes.sort((a, b) => {
         const aIndex = typeOrder.indexOf(a);
@@ -309,7 +460,8 @@ function createCourseCard(course, courseIndex) {
 
         items.forEach(item => {
             const materialIndex = course.materials.findIndex(
-                m => m.type === item.type && m.title === item.title && m.url === item.url
+                m => m.type === item.type && m.title === item.title && 
+                     (item.type === 'textnote' ? m.content === item.content : m.url === item.url)
             );
 
             const li = document.createElement('li');
@@ -318,11 +470,22 @@ function createCourseCard(course, courseIndex) {
 
             const icon = getIconForType(item.type);
 
-            li.innerHTML = `
-                <span class="material-icon" title="Drag to reorder">${icon}</span>
-                <a href="${item.url}" class="material-link" target="_blank" rel="noopener">${item.title}</a>
-                <button class="delete-material" data-course-id="${course.id}" data-material-index="${materialIndex}">🗑️</button>
-            `;
+            if (item.type === 'textnote') {
+                li.innerHTML = `
+                    <span class="material-icon" title="Drag to reorder">${icon}</span>
+                    <div class="note-content">
+                        <strong>${item.title}</strong>
+                        <p>${item.content.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <button class="delete-material" data-course-id="${course.id}" data-material-index="${materialIndex}">🗑️</button>
+                `;
+            } else {
+                li.innerHTML = `
+                    <span class="material-icon" title="Drag to reorder">${icon}</span>
+                    <a href="${item.url}" class="material-link" target="_blank" rel="noopener">${item.title}</a>
+                    <button class="delete-material" data-course-id="${course.id}" data-material-index="${materialIndex}">🗑️</button>
+                `;
+            }
             list.appendChild(li);
         });
 
@@ -332,7 +495,6 @@ function createCourseCard(course, courseIndex) {
 
     card.appendChild(sectionsContainer);
 
-    // Add material button
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-add-material';
     addBtn.innerHTML = '➕ Add Material';
@@ -342,7 +504,7 @@ function createCourseCard(course, courseIndex) {
     return card;
 }
 
-// Show add material form
+// ✅ Correct showAddMaterialForm function (with note support)
 function showAddMaterialForm(card, courseId) {
     const oldForm = card.querySelector('.add-material-form');
     if (oldForm) oldForm.remove();
@@ -354,7 +516,8 @@ function showAddMaterialForm(card, courseId) {
         { value: 'book', label: '📘 Book' },
         { value: 'pdf', label: '📕 PDF' },
         { value: 'link', label: '🔗 Link' },
-        { value: 'note', label: '📓 Notes' },
+        { value: 'note', label: '📓 Note (URL)' },
+        { value: 'textnote', label: '📝 Write Note' },
         { value: 'audio', label: '🎤 Audio' },
         { value: 'recording', label: '📹 Class Recording' }
     ];
@@ -366,30 +529,65 @@ function showAddMaterialForm(card, courseId) {
 
     form.innerHTML = `
         <select id="mat-type">${optionsHtml}</select>
-        <input type="text" id="mat-title" placeholder="Title (e.g. Lecture 1 Recording)" />
-        <input type="text" id="mat-url" placeholder="URL (e.g. pdfs/lecture1.mp4 or https://...)" />
+        <input type="text" id="mat-title" placeholder="Title (e.g. My Notes on Calculus)" />
+        <div id="url-field">
+            <input type="text" id="mat-url" placeholder="URL (e.g. pdfs/lecture1.mp4 or https://...)" />
+        </div>
+        <div id="note-field" style="display: none;">
+            <textarea id="mat-content" rows="6" placeholder="Write your notes here..."></textarea>
+        </div>
         <button id="save-material">Save Material</button>
         <button id="cancel-material">Cancel</button>
     `;
     card.appendChild(form);
 
+    const typeSelect = document.getElementById('mat-type');
+    const urlField = document.getElementById('url-field');
+    const noteField = document.getElementById('note-field');
+    
+    typeSelect.addEventListener('change', () => {
+        if (typeSelect.value === 'textnote') {
+            urlField.style.display = 'none';
+            noteField.style.display = 'block';
+        } else {
+            urlField.style.display = 'block';
+            noteField.style.display = 'none';
+        }
+    });
+
     document.getElementById('save-material').addEventListener('click', async () => {
-        const type = document.getElementById('mat-type').value;
+        const type = typeSelect.value;
         const title = document.getElementById('mat-title').value.trim();
-        const url = document.getElementById('mat-url').value.trim();
-        if (!title || !url) {
-            alert('Please fill both title and URL.');
+        
+        if (!title) {
+            alert('Please enter a title.');
             return;
         }
 
-        // Find the course in the courses array by its Firestore ID
+        let newMaterial;
+        
+        if (type === 'textnote') {
+            const content = document.getElementById('mat-content').value.trim();
+            if (!content) {
+                alert('Please write some notes.');
+                return;
+            }
+            newMaterial = { type, title, content };
+        } else {
+            const url = document.getElementById('mat-url').value.trim();
+            if (!url) {
+                alert('Please enter a URL.');
+                return;
+            }
+            newMaterial = { type, title, url };
+        }
+
         const courseIndex = courses.findIndex(c => c.id === courseId);
         if (courseIndex === -1) return;
 
-        courses[courseIndex].materials.push({ type, title, url });
-
+        courses[courseIndex].materials.push(newMaterial);
         await saveCoursesToFirestore();
-        await loadCoursesFromFirestore(); // reload to update UI
+        await loadCoursesFromFirestore();
     });
 
     document.getElementById('cancel-material').addEventListener('click', () => {
@@ -414,10 +612,9 @@ document.getElementById('addCourseBtn').addEventListener('click', async () => {
         materials: []
     };
 
-    // Add to Firestore directly under the user's collection
     const userCoursesRef = db.collection('users').doc(currentUser.uid).collection('courses');
     await userCoursesRef.add(newCourse);
-    await loadCoursesFromFirestore(); // reload
+    await loadCoursesFromFirestore();
 });
 
 // Delete material
@@ -503,10 +700,17 @@ function initMaterialSortable(card, courseIndex) {
                     const type = l.getAttribute('data-type');
                     const items = l.querySelectorAll('.material-item');
                     items.forEach(item => {
-                        const link = item.querySelector('.material-link');
-                        const title = link.textContent;
-                        const url = link.getAttribute('href');
-                        newMaterials.push({ type, title, url });
+                        // For textnote items, we need to get content; for others, URL
+                        if (item.classList.contains('textnote')) {
+                            const title = item.querySelector('strong').textContent;
+                            const content = item.querySelector('p').textContent;
+                            newMaterials.push({ type, title, content });
+                        } else {
+                            const link = item.querySelector('.material-link');
+                            const title = link.textContent;
+                            const url = link.getAttribute('href');
+                            newMaterials.push({ type, title, url });
+                        }
                     });
                 });
                 courses[courseIndex].materials = newMaterials;

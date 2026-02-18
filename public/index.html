@@ -3,7 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Course Materials Hub</title>
+    
+    <!-- Version check – update this number every time you deploy -->
+    <script>
+        const APP_VERSION = '20250219'; // ⬅️ Change this on every update
+        const storedVersion = localStorage.getItem('app_version');
+        if (storedVersion !== APP_VERSION) {
+            // Clear any old service worker caches
+            if ('caches' in window) {
+                caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+            }
+            localStorage.setItem('app_version', APP_VERSION);
+            // Force reload from server
+            window.location.reload(true);
+        }
+    </script>
+
     <!-- SortableJS for drag & drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <!-- CSS with version cache‑buster -->
@@ -14,26 +33,58 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
-    <header>
-        <h1>📚 My Semester Courses</h1>
-        <p>Drag cards to rearrange • Sky‑blue edition</p>
-        
-        <!-- Authentication area -->
-        <div id="auth-section">
-            <div id="user-info" style="display: none;">
-                <span id="user-email"></span>
-                <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
-            </div>
-            <div id="sign-in-form">
-                <input type="email" id="signin-email" placeholder="Email" />
-                <input type="password" id="signin-password" placeholder="Password" />
-                <button id="signin-btn" class="btn-primary">Sign In</button>
-                <button id="signup-btn" class="btn-secondary">Sign Up</button>
+   <header>
+    <h1>📚 My Semester Courses</h1>
+    <p>Drag cards to rearrange • Sky‑blue edition</p>
+    
+    <!-- Authentication area -->
+    <div id="auth-section">
+        <!-- Sign In Form (no name field) -->
+        <div id="sign-in-form">
+            <input type="email" id="signin-email" placeholder="Email" />
+            <input type="password" id="signin-password" placeholder="Password" />
+            <button id="signin-btn" class="btn-primary">Sign In</button>
+            <button id="signup-btn" class="btn-secondary">Sign Up</button>
+            <div>
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
             </div>
         </div>
+        
+        <!-- User Info (shown when signed in) -->
+        <div id="user-info" style="display: none;">
+            <span id="user-display"></span>
+            <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
+            <button id="change-password-btn" class="btn-secondary">Change Password</button>
+            <button id="delete-account-btn" class="btn-danger">Delete Account</button>
+        </div>
+    </div>
 
-        <button id="addCourseBtn" class="btn-primary">➕ New Course</button>
-    </header>
+    <button id="addCourseBtn" class="btn-primary">➕ New Course</button>
+</header>
+
+<!-- Sign Up Modal (hidden by default) -->
+<div id="signup-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Sign Up</h3>
+        <input type="text" id="signup-name" placeholder="Full Name" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="email" id="signup-email" placeholder="Email" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="password" id="signup-password" placeholder="Password" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="password" id="signup-confirm" placeholder="Confirm Password" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <button id="modal-signup-btn" class="btn-primary" style="margin-right:0.5rem;">Sign Up</button>
+        <button id="modal-cancel-btn" class="btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<!-- Modal for Change Password (hidden by default) -->
+<div id="change-password-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Change Password</h3>
+        <input type="password" id="new-password" placeholder="New password" style="width:100%; padding:0.5rem; margin:1rem 0;" />
+        <input type="password" id="confirm-password" placeholder="Confirm new password" style="width:100%; padding:0.5rem; margin:1rem 0;" />
+        <button id="save-new-password" class="btn-primary">Save</button>
+        <button id="cancel-change-password" class="btn-secondary">Cancel</button>
+    </div>
+</div>
     <main id="courseContainer" class="course-grid">
         <!-- Cards will be generated here -->
     </main>
