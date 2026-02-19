@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Course Materials Hub</title>
+    
+    <!-- Version number – change this on every deploy -->
+    <script>
+        const APP_VERSION = '20250237'; // <-- Update this number
+        const storedVersion = localStorage.getItem('app_version');
+        if (storedVersion !== APP_VERSION) {
+            if ('caches' in window) {
+                caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+            }
+            localStorage.setItem('app_version', APP_VERSION);
+            // Append version to all resource URLs to force refresh
+            const links = document.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(link => {
+                link.href = link.href.split('?')[0] + '?v=' + APP_VERSION;
+            });
+            const scripts = document.querySelectorAll('script[src]');
+            scripts.forEach(script => {
+                if (!script.src.includes('firebase') && !script.src.includes('sortable')) {
+                    script.src = script.src.split('?')[0] + '?v=' + APP_VERSION;
+                }
+            });
+            // Force reload
+            window.location.reload(true);
+        }
+    </script>
+
+    <!-- SortableJS (external, no version needed) -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <!-- Your CSS and JS with version injected by the script above -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Firebase SDKs (no version needed) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+   <header>
+    <h1>📚 My Semester Courses</h1>
+    <p>Drag cards to rearrange • Sky‑blue edition</p>
+    
+    <!-- Authentication area -->
+    <div id="auth-section">
+        <!-- Sign In Form (no name field) -->
+        <div id="sign-in-form">
+            <input type="email" id="signin-email" placeholder="Email" />
+            <input type="password" id="signin-password" placeholder="Password" />
+            <button id="signin-btn" class="btn-primary">Sign In</button>
+            <button id="signup-btn" class="btn-secondary">Sign Up</button>
+            <div>
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
+            </div>
+        </div>
+        
+        <!-- User Info (shown when signed in) -->
+        <div id="user-info" style="display: none;">
+            <span id="user-display"></span>
+            <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
+            <button id="change-password-btn" class="btn-secondary">Change Password</button>
+            <button id="delete-account-btn" class="btn-danger">Delete Account</button>
+        </div>
+    </div>
+
+    <button id="addCourseBtn" class="btn-primary">➕ New Course</button>
+</header>
+
+<!-- Sign Up Modal (hidden by default) -->
+<div id="signup-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Sign Up</h3>
+        <input type="text" id="signup-name" placeholder="Full Name" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="email" id="signup-email" placeholder="Email" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="password" id="signup-password" placeholder="Password" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="password" id="signup-confirm" placeholder="Confirm Password" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <button id="modal-signup-btn" class="btn-primary" style="margin-right:0.5rem;">Sign Up</button>
+        <button id="modal-cancel-btn" class="btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<!-- Modal for Change Password (hidden by default) -->
+<div id="change-password-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Change Password</h3>
+        <input type="password" id="new-password" placeholder="New password" style="width:100%; padding:0.5rem; margin:1rem 0;" />
+        <input type="password" id="confirm-password" placeholder="Confirm new password" style="width:100%; padding:0.5rem; margin:1rem 0;" />
+        <button id="save-new-password" class="btn-primary">Save</button>
+        <button id="cancel-change-password" class="btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div id="edit-course-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Edit Course</h3>
+        <input type="text" id="edit-course-code" placeholder="Course code (e.g., MAT120)" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <input type="text" id="edit-course-name" placeholder="Course name (e.g., Calculus I)" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <button id="save-course-edit" class="btn-primary" style="margin-right:0.5rem;">Save</button>
+        <button id="cancel-course-edit" class="btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<!-- Edit Material Modal -->
+<div id="edit-material-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:2rem; border-radius:1rem; max-width:400px; width:90%;">
+        <h3>Edit Material</h3>
+        <input type="text" id="edit-mat-title" placeholder="Title" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        <div id="edit-url-field">
+            <input type="text" id="edit-mat-url" placeholder="URL (e.g. pdfs/lecture1.mp4 or https://...)" style="width:100%; padding:0.5rem; margin:0.5rem 0;" />
+        </div>
+        <div id="edit-note-field" style="display:none;">
+            <textarea id="edit-mat-content" rows="6" placeholder="Write your notes here..." style="width:100%; padding:0.5rem; margin:0.5rem 0;"></textarea>
+        </div>
+        <button id="save-material-edit" class="btn-primary" style="margin-right:0.5rem;">Save</button>
+        <button id="cancel-material-edit" class="btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<!-- Note Popup Modal -->
+<div id="note-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; justify-content:center; align-items:center; opacity:0; transition:opacity 0.3s ease;">
+    <div style="background:white; padding:2rem; border-radius:1.5rem; max-width:500px; width:90%; max-height:80vh; overflow-y:auto; transform:scale(0.9); transition:transform 0.3s ease; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid #e2e8f0; padding-bottom:0.75rem;">
+            <h3 id="popup-note-title" style="color:#0a2a44; margin:0;"></h3>
+            <button id="close-note-popup" style="background:none; border:none; font-size:1.5rem; cursor:pointer; opacity:0.6; transition:opacity 0.2s;">&times;</button>
+        </div>
+        <div id="popup-note-content" style="white-space:pre-wrap; word-wrap:break-word; line-height:1.6; color:#1e293b;"></div>
+    </div>
+</div>
+
+<main id="courseContainer" class="course-grid">
+    <!-- Cards will be generated here -->
+</main>
+
+<!-- Main script with version cache‑buster -->
+<script src="script.js?v=20250237"></script>
+</body>
+</html>
