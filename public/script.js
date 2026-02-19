@@ -344,10 +344,16 @@ function createCourseCard(course, courseIndex) {
     header.className = 'course-header';
     header.innerHTML = `
         <span class="drag-handle" title="Drag to reorder course">⋮⋮</span>
-        <div class="course-code">${course.code}</div>
-        <div class="course-name">${course.name}</div>
-        <button class="edit-course" title="Edit course" data-course-id="${course.id}">✏️</button>
-        <button class="delete-course" title="Delete course" data-course-id="${course.id}">🗑️</button>
+
+        <div class="course-main">
+            <div class="course-code">${course.code}</div>
+            <div class="course-name">${course.name}</div>
+        </div>
+
+        <div class="course-actions">
+            <button class="edit-course" title="Edit course" data-course-id="${course.id}">✏️</button>
+            <button class="delete-course" title="Delete course" data-course-id="${course.id}">🗑️</button>
+        </div>
     `;
     card.appendChild(header);
 

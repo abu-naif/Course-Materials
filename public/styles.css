@@ -125,38 +125,66 @@ header p {
     transform: translateY(-4px) scale(1.01);
 }
 
-/* Header – keep dark text for contrast */
+/* Header – grid layout (buttons on top row, name below) */
 .course-header {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
     gap: 0.5rem;
     margin-bottom: 1.2rem;
     border-bottom: 2px solid rgba(10,42,68,0.2);
     padding-bottom: 0.8rem;
 }
+.course-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.course-actions {
+    display: flex;
+    gap: 0.4rem;
+    justify-self: end;
+}
+
+.course-actions button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.course-actions button:hover {
+    opacity: 1;
+}
+/* Drag handle – first column */
 .drag-handle {
+    grid-column: 1;
     font-size: 1.5rem;
     cursor: grab;
     color: #2c3e50;
     opacity: 0.6;
     transition: opacity 0.2s;
-    margin-right: auto;
 }
 .drag-handle:active { cursor: grabbing; }
 .course-card:hover .drag-handle { opacity: 1; }
+
+/* Course code – second column */
 .course-code {
+    grid-column: 2;
     font-size: 1.8rem;
     font-weight: 700;
     color: #0a2a44;
     line-height: 1.2;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+    white-space: nowrap;          /* prevent wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.course-name {
-    font-size: 1rem;
-    color: #1e3c5c;
-    font-weight: 400;
-}
-.edit-course, .delete-course {
+
+/* Edit button – third column */
+.edit-course {
+    grid-column: 3;
     background: none;
     border: none;
     font-size: 1.2rem;
@@ -165,8 +193,28 @@ header p {
     transition: opacity 0.2s;
 }
 .edit-course:hover { opacity: 1; color: #2563eb; }
+
+/* Delete button – fourth column */
+.delete-course {
+    grid-column: 4;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
 .delete-course:hover { opacity: 1; color: #dc2626; }
 
+/* Course name – spans all columns (second row) */
+.course-name {
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    color: #1e3c5c;
+    font-weight: 400;
+    word-break: break-word;       /* allow long words to wrap */
+}
 /* Scrollable material sections */
 .material-sections {
     flex: 1;
@@ -485,4 +533,9 @@ header p {
 }
 .material-item.textnote button {
     cursor: pointer;
+}
+.course-name {
+    word-break: break-word;      /* breaks long words */
+    overflow-wrap: break-word;    /* ensures wrapping */
+    max-width: 100%;              /* stays inside card */
 }
