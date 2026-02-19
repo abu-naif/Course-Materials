@@ -173,7 +173,7 @@ header p {
 /* Course code – second column */
 .course-code {
     grid-column: 2;
-    font-size: 1.8rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: #0a2a44;
     line-height: 1.2;
@@ -488,7 +488,7 @@ header p {
     }
     .course-code {
         grid-column: 2;
-        font-size: 1.3rem;
+        font-size: 1rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
